@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+<style>
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  margin: auto;
+  padding-top: 40px;
+  position: relative;
+  width: 960px;
+}
+
+line {
+    stroke: 'black';
+    stroke-width: 1px;
+}
+
+dots{
+   stroke: {{color}};
+}
+
+
+</style>
+
+<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+</head>
+<body>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+
+//////////////////////////////////
+// sockets
+//////////////////////////////////
+var wsUri = "ws://localhost:8000/echo"; 
+var name = '{{name}}';
+var output;  
+
+
+function testWebSocket() { 
+   websocket = new WebSocket(wsUri); 
+   websocket.onopen = function(evt) { 
+       onOpen(evt) 
+   }; 
+   websocket.onclose = function(evt) { 
+       onClose(evt) 
+   }; 
+   websocket.onmessage = function(evt) { 
+     onMessage(evt) 
+   }; 
+   websocket.onerror = function(evt) { 
+     onError(evt) 
+   }; 
+}  
+   function onOpen(evt) { 
+      writeToScreen("CONNECTED"); 
+      doSend(name + " has connected!"); 
+   }  
+   function onClose(evt) { 
+        writeToScreen(name + " has disconnected!"); 
+   }  
+   function onMessage(evt) { 
+        console.log(evt.data); 
+       // websocket.close(); 
+   }  
+   function onError(evt) { 
+        console.log( evt.data); 
+   }  
+   function doSend(message) { 
+       console.log( message);  
+       websocket.send(message);
+       
+   }
+   function writeToScreen(message) {
+       console.log(message);
+   }
+
+
+ testWebSocket(); 
+
+// D3 setup stuff
+
+var line;
+var dots;
+var w = 900;
+var h = 400;
+var border=1;
+var count = 0;
+var clist = [];
+var max = 100;
+
+randomColor = function() {
+    return "hsl(" + Math.random() * 360 + ",100%,50%)";
+    }
+
+var myColor = randomColor();
+
+var cvis = d3.select("body").append("svg")
+     .attr("width", w)
+     .attr("height", h)
+     .attr("border",border)
+     .on("mousemove", cmove);
+
+
+function cmove(){
+    console.log(this);
+    var pos = d3.mouse(this);
+    console.log(pos);
+    var enter = cvis.selectAll("circle")
+    .data(clist)
+    .enter()
+    .append("circle")
+    .style("fill", myColor)
+    .attr("cx", pos[0])
+    .attr("cy", pos[1])
+    .attr("r", 20);
+
+
+    cvis.select("text").remove(); //get rid of old lables
+
+    var who = cvis.selectAll("text")
+    .data([name])
+    .enter()
+    .append("text")
+    .text(name)
+    .attr("dx", pos[0])
+    .attr("dy", pos[1])
+    .attr("font-family", "sans-serif")
+    .attr("font-size", "20px")
+    .attr("fill", "black");
+ 
+    var socketMessage = "{'name':'" + name + "','xcord':'" + pos[0] + "','ycord':'" + pos[1] + "'}"
+    websocket.send(socketMessage);
+    count += 1;
+    clist.push(count);
+    if (clist.length > max){
+       clist.shift();
+       cvis.select("circle")
+       .remove();
+    }    
+}
+
+
+
+ var cborderPath = cvis.append("rect")
+  .attr("x", 0)
+  .attr("y", 0)
+  .attr("height", h)
+  .attr("width", w)
+  .style("stroke", "red")
+  .style("fill", "none")
+  .style("stroke-width", 1);
+
+
+</script>
+
+</body>
+</html>
