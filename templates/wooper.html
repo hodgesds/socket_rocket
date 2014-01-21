@@ -23,11 +23,11 @@ dots{
 
 </style>
 
-<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+<script src="static/jquery-1.10.1.min.js"></script>
 </head>
 <body>
 
-<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="static/d3.v3.min.js"></script>
 <script>
 
 
@@ -37,9 +37,9 @@ dots{
 var wsUri = "ws://localhost:8000/echo"; 
 var name = '{{name}}';
 var output;  
+var channel = '{{channel}}';
 
-
-function testWebSocket() { 
+function socketSetup(){
    websocket = new WebSocket(wsUri); 
    websocket.onopen = function(evt) { 
        onOpen(evt) 
@@ -53,10 +53,11 @@ function testWebSocket() {
    websocket.onerror = function(evt) { 
      onError(evt) 
    }; 
-}  
+}
    function onOpen(evt) { 
-      writeToScreen("CONNECTED"); 
       doSend(name + " has connected!"); 
+    // subscribe to the channel
+    websocket.send('{"subscribe":"' + channel + '"}');
    }  
    function onClose(evt) { 
         writeToScreen(name + " has disconnected!"); 
@@ -78,8 +79,7 @@ function testWebSocket() {
    }
 
 
- testWebSocket(); 
-
+socketSetup();
 // D3 setup stuff
 
 var line;
@@ -105,9 +105,7 @@ var cvis = d3.select("body").append("svg")
 
 
 function cmove(){
-    console.log(this);
     var pos = d3.mouse(this);
-    console.log(pos);
     var enter = cvis.selectAll("circle")
     .data(clist)
     .enter()
@@ -131,7 +129,10 @@ function cmove(){
     .attr("font-size", "20px")
     .attr("fill", "black");
  
-    var socketMessage = "{'name':'" + name + "','xcord':'" + pos[0] + "','ycord':'" + pos[1] + "'}"
+    var socketMessage = '{"name":"' + name + '","xcord":"' + pos[0] + 
+        '","ycord":"' + pos[1] + '","channel":"' + channel +
+        '","color":"' + myColor + '"}'
+    console.log(socketMessage);
     websocket.send(socketMessage);
     count += 1;
     clist.push(count);
@@ -152,7 +153,6 @@ function cmove(){
   .style("stroke", "red")
   .style("fill", "none")
   .style("stroke-width", 1);
-
 
 </script>
 
