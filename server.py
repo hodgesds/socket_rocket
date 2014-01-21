@@ -48,43 +48,38 @@ def listen(pubsub, channel):
         print "got pubsub message:\n",msg
         gevent.sleep(1)
 
-def callback(channel=None):
+def callback(channel='test', ws=None):
     print 'listening on channel:', channel
     rconn = redis.Redis(host='localhost', port=6379, db=0)
     pubsub = rconn.pubsub()
-    pubsub.subscribe('clock')
+    pubsub.subscribe(channel)
     while True:
         for m in pubsub.listen():
-            print m #'Recieved: {0}'.format(m['data'])
+            if ws is not None:
+                ws.send(m)
                         
 @sockets.route('/echo')
 def echo_socket(ws):
-    rconn = redis.Redis(host='localhost', port=6379, db=0)
-    pubsub = rconn.pubsub()
+    rhost = redis.Redis(host='localhost', port=6379, db=0)
+    pubsub = rhost.pubsub()
     open_channels = []
     while True:
         message = ws.receive()
         ws.send('woop')
-        #print message
         try:
             data = json.loads(message)
             if 'subscribe' in data.keys():
                 if data['subscribe'] not in open_channels:
+                    print 'New channel on', data['subscribe']
                     open_channels.append(data['subscribe'])
-                    pubsub.subscribe(data['subscribe'])
-                    t = threading.Thread(target=callback)
-                    t.setDaemon(True)
-                    t.start()
+                    rclient = redis.Redis(host='localhost', port=6379, db=0)
+                    clientps = rclient.pubsub()
+                    clientps.subscribe(data['subscribe'])
             if 'name' in data.keys() and 'channel' in data.keys():
-                pubsub.publish(data['channel'], message)
-                #pub.sub(pubsub, data['channel'], message)
-                print 'c'
-                #gevent.spawn(listen(pubsub, data['channel'])).join()
+                rhost.publish(data['channel'], message)
         except:
             pass
-        #for msg in pubsub.listen():
-        #    print "got pubsub message:\n",msg
-
+        
 
 @sockets.route('/socket.io/echo')
 def poll():
