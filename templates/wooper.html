@@ -55,25 +55,25 @@ function socketSetup(){
    }; 
 }
    function onOpen(evt) { 
-      doSend(name + " has connected!"); 
-    // subscribe to the channel
-    websocket.send('{"subscribe":"' + channel + '"}');
+        doSend(name + " has connected!"); 
+        // subscribe to the channel
+        websocket.send('{"subscribe":"' + channel + '"}');
    }  
    function onClose(evt) { 
         writeToScreen(name + " has disconnected!"); 
    }  
    function onMessage(evt) { 
-        console.log(evt.data); 
+        //console.log('Got message:'+evt.data); 
        // websocket.close(); 
    }  
    function onError(evt) { 
         console.log( evt.data); 
    }  
    function doSend(message) { 
-       console.log( message);  
+       //console.log( message);  
        websocket.send(message);
-       
    }
+   
    function writeToScreen(message) {
        console.log(message);
    }
@@ -131,7 +131,7 @@ function cmove(){
  
     var socketMessage = '{"name":"' + name + '","xcord":"' + pos[0] + 
         '","ycord":"' + pos[1] + '","channel":"' + channel +
-        '","color":"' + myColor + '"}'
+        '","color":"' + myColor + '"}';
     console.log(socketMessage);
     websocket.send(socketMessage);
     count += 1;

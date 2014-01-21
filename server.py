@@ -64,6 +64,7 @@ def echo_socket(ws):
     open_channels = []
     while True:
         message = ws.receive()
+        ws.send('woop')
         #print message
         try:
             data = json.loads(message)
@@ -80,13 +81,10 @@ def echo_socket(ws):
                 print 'c'
                 #gevent.spawn(listen(pubsub, data['channel'])).join()
         except:
-            continue
+            pass
         #for msg in pubsub.listen():
         #    print "got pubsub message:\n",msg
-        #    ws.send(msg)
-        #    sleep(.01)
-        #    break
-        print open_channels
+
 
 @sockets.route('/socket.io/echo')
 def poll():
