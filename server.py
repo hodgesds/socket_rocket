@@ -23,27 +23,6 @@ BROKER_URL = 'redis://%s:%s/0' % (REDIS_HOST, REDIS_PORT)
 app.debug=True
 sockets = Sockets(app)
 
-def listen(n, channel):
-  for x in range(n):
-    t = threading.Thread(target=callback, args=(channel,))
-    t.setDaemon(True)
-    t.start()
-
-
-def callback(channel):
-    print 'listening on channel:', channel
-    r = redis.client.StrictRedis()
-    sub = r.pubsub()
-    sub.subscribe(channel)
-    messages = []
-    while True:
-        for m in sub.listen():
-            print 'got message',m
-                    
-#rhost = redis.Redis(host='localhost', port=6379, db=0)
-#pubsub = rhost.pubsub()
-
-
 
 def grab_ps_data(ps):
     messages = []
