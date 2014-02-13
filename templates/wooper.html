@@ -39,19 +39,20 @@ var name = '{{name}}';
 var output;  
 var channel = '{{channel}}';
 
+
 function socketSetup(){
    websocket = new WebSocket(wsUri); 
    websocket.onopen = function(evt) { 
-       onOpen(evt) 
+       onOpen(evt);
    }; 
    websocket.onclose = function(evt) { 
-       onClose(evt) 
+       onClose(evt); 
    }; 
    websocket.onmessage = function(evt) { 
-     onMessage(evt) 
+     onMessage(evt) ;
    }; 
    websocket.onerror = function(evt) { 
-     onError(evt) 
+     onError(evt) ;
    }; 
 }
    function onOpen(evt) { 
@@ -63,11 +64,13 @@ function socketSetup(){
         writeToScreen(name + " has disconnected!"); 
    }  
    function onMessage(evt) { 
-        //console.log('Got message:'+evt.data); 
+       aa=evt;
+        console.log('Got message:'+ evt.data);
+        ceeLow(evt.data);
        // websocket.close(); 
    }  
    function onError(evt) { 
-        console.log( evt.data); 
+        console.log("ERROR!", evt.data); 
    }  
    function doSend(message) { 
        //console.log( message);  
@@ -75,7 +78,7 @@ function socketSetup(){
    }
    
    function writeToScreen(message) {
-       console.log(message);
+       //console.log(message);
    }
 
 
@@ -89,7 +92,8 @@ var h = 400;
 var border=1;
 var count = 0;
 var clist = [];
-var max = 100;
+var others = {}
+var maxobs = 100;
 
 randomColor = function() {
     return "hsl(" + Math.random() * 360 + ",100%,50%)";
@@ -103,6 +107,58 @@ var cvis = d3.select("body").append("svg")
      .attr("border",border)
      .on("mousemove", cmove);
 
+var cvis2 = d3.select("body").append("svg")
+     .attr("width", w)
+     .attr("height", h)
+     .attr("border",border)
+     .on("mousemove", cmove);
+
+
+function ceeLow(message){
+    message = JSON.parse(message);
+    data = JSON.parse(message.data);
+    console.log(data);
+    if (Object.keys(others).indexOf(data.name)===-1){
+        others[data.name] = {
+            clist : [],
+            pos: [data.xcord, data.ycord],
+            color: data.color,
+            count:0,
+        }
+    }
+
+    var enter = cvis2.selectAll("circle")
+    .data(others[data.name].clist)
+    .enter()
+    .append("circle")
+    .style("fill", others[data.name].color)
+    .attr("cx", others[data.name].pos[0])
+    .attr("cy", others[data.name].pos[1])
+    .attr("r", 20);
+
+
+    cvis2.select("text").remove(); //get rid of old lables
+
+    var who = cvis2.selectAll("text")
+    .data([data.name])
+    .enter()
+    .append("text")
+    .text(data.name)
+    .attr("dx", others[data.name].pos[0])
+    .attr("dy", others[data.name].pos[1])
+    .attr("font-family", "sans-serif")
+    .attr("font-size", "20px")
+    .attr("fill", "black");
+ 
+    others[data.name].count += 1;
+    others[data.name].clist.push(others[data.name].count);
+    if (others[data.name].clist > maxobs){
+       others[data.name].clist.shift();
+       cvis2.select("circle")
+       .remove();
+    }    
+
+}
 
 function cmove(){
     var pos = d3.mouse(this);
@@ -132,11 +188,11 @@ function cmove(){
     var socketMessage = '{"name":"' + name + '","xcord":"' + pos[0] + 
         '","ycord":"' + pos[1] + '","channel":"' + channel +
         '","color":"' + myColor + '"}';
-    console.log(socketMessage);
+    //console.log(socketMessage);
     websocket.send(socketMessage);
     count += 1;
     clist.push(count);
-    if (clist.length > max){
+    if (clist.length > maxobs){
        clist.shift();
        cvis.select("circle")
        .remove();
@@ -146,6 +202,15 @@ function cmove(){
 
 
  var cborderPath = cvis.append("rect")
+  .attr("x", 0)
+  .attr("y", 0)
+  .attr("height", h)
+  .attr("width", w)
+  .style("stroke", "red")
+  .style("fill", "none")
+  .style("stroke-width", 1);
+
+ var cborderPath2 = cvis2.append("rect")
   .attr("x", 0)
   .attr("y", 0)
   .attr("height", h)

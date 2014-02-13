@@ -8,29 +8,10 @@ import redis
 import threading
 from time import sleep
 import os
-from celery import Celery
-from celery.bin import Option
-
-def make_celery(app):
-    celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
-    celery.conf.update(app.config)
-    TaskBase = celery.Task
-    class ContextTask(TaskBase):
-        abstract = True
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-    celery.Task = ContextTask
-    return celery
-
 
 PID = os.getpid()
 
 app = Flask(__name__)
-app.config.update(
-    CELERY_BROKER_URL='redis://localhost:6379',
-    CELERY_RESULT_BACKEND='redis://localhost:6379'
-)
 
 REDIS_HOST = '192.168.0.10'
 REDIS_PORT = 6379
@@ -42,51 +23,82 @@ BROKER_URL = 'redis://%s:%s/0' % (REDIS_HOST, REDIS_PORT)
 app.debug=True
 sockets = Sockets(app)
 
-def listen(pubsub, channel):
-    print 'starting listener'
-    for msg in pubsub.listen():
-        print "got pubsub message:\n",msg
-        gevent.sleep(1)
+def listen(n, channel):
+  for x in range(n):
+    t = threading.Thread(target=callback, args=(channel,))
+    t.setDaemon(True)
+    t.start()
 
-def callback(channel='test', ws=None):
+
+def callback(channel):
     print 'listening on channel:', channel
-    rconn = redis.Redis(host='localhost', port=6379, db=0)
-    pubsub = rconn.pubsub()
-    pubsub.subscribe(channel)
+    r = redis.client.StrictRedis()
+    sub = r.pubsub()
+    sub.subscribe(channel)
+    messages = []
     while True:
-        for m in pubsub.listen():
-            if ws is not None:
-                ws.send(m)
-                        
+        for m in sub.listen():
+            print 'got message',m
+                    
+#rhost = redis.Redis(host='localhost', port=6379, db=0)
+#pubsub = rhost.pubsub()
+
+
+
+def grab_ps_data(ps):
+    messages = []
+    for item in ps.listen():
+        if item['type'] == 'message':
+            messages.append(item)
+            yield item
+        else:
+            yield None
+
+
 @sockets.route('/echo')
 def echo_socket(ws):
-    rhost = redis.Redis(host='localhost', port=6379, db=0)
-    pubsub = rhost.pubsub()
+    channel = ''
+    r = redis.client.StrictRedis()
+    rpub = redis.client.StrictRedis()
+    sub = r.pubsub()
+    sub_client = None
     open_channels = []
     while True:
         message = ws.receive()
-        ws.send('woop')
-        try:
-            data = json.loads(message)
-            if 'subscribe' in data.keys():
-                if data['subscribe'] not in open_channels:
-                    print 'New channel on', data['subscribe']
+        if message:
+            try:
+                data = json.loads(message)
+                if 'subscribe' in data.keys():
+                    channel = data['subscribe']
                     open_channels.append(data['subscribe'])
-                    rclient = redis.Redis(host='localhost', port=6379, db=0)
-                    clientps = rclient.pubsub()
-                    clientps.subscribe(data['subscribe'])
-            if 'name' in data.keys() and 'channel' in data.keys():
-                rhost.publish(data['channel'], message)
+                    sub.subscribe(open_channels)
+                    if sub_client is None:
+                        sub_client = grab_ps_data(sub)
+                if 'name' in data.keys() and 'channel' in data.keys():
+                    rpub.publish(data['channel'], message)
+            except:
+                pass
+        try:
+            if sub_client is not None:
+                x = 1
+                while True:
+                    i = next(sub_client)
+                    if i is not None:
+                        pmess = json.loads(i['data'])
+                        # ignore our own spam
+                        if data['name'] in pmess['name']:
+                            # republish it.... :p
+                            rpub.publish(channel, i)
+                            continue
+                        else:
+                            # we can consume it!
+                            ws.send(json.dumps(i))  
+                    else:
+                        break
         except:
             pass
-        
 
-@sockets.route('/socket.io/echo')
-def poll():
-    while True:
-        message = ws.receive()
-        print message
-        ws.send(message)
+
 
 @app.route('/<channel>')
 def hello(channel):
