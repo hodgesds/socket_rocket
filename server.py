@@ -33,47 +33,54 @@ def grab_ps_data(ps):
         else:
             yield None
 
-
-@sockets.route('/echo')
-def echo_socket(ws):
-    channel = ''
-    r = redis.client.StrictRedis()
+def listener(ws):
+    pass
+    
+@sockets.route('/pub_msg')
+def read_socket(ws):
     rpub = redis.client.StrictRedis()
+    while True:
+        message = ws.receive()
+        if message:
+            try:
+                data = json.loads(message)
+                if 'name' in data.keys() and 'channel' in data.keys():
+                    rpub.publish(data['channel'], message)
+            except:
+                pass
+    
+@sockets.route('/sub_msg')
+def echo_socket(ws):
+    channel = None
+    user = None
+    rlisten = redis.client.StrictRedis()
+    r = redis.client.StrictRedis()
     sub = r.pubsub()
     sub_client = None
     open_channels = []
-    while True:
+    while sub_client is None:
+        print 'waiting on sub channel'
         message = ws.receive()
         if message:
             try:
                 data = json.loads(message)
                 if 'subscribe' in data.keys():
                     channel = data['subscribe']
+                    user = data['user']
                     open_channels.append(data['subscribe'])
                     sub.subscribe(open_channels)
-                    if sub_client is None:
-                        sub_client = grab_ps_data(sub)
-                if 'name' in data.keys() and 'channel' in data.keys():
-                    rpub.publish(data['channel'], message)
+                    sub_client = grab_ps_data(sub)
+                    print 'listenting on channel', data['subscribe']            
             except:
                 pass
+    while True:
         try:
-            if sub_client is not None:
-                x = 1
-                while True:
-                    i = next(sub_client)
-                    if i is not None:
-                        pmess = json.loads(i['data'])
-                        # ignore our own spam
-                        if data['name'] in pmess['name']:
-                            # republish it.... :p
-                            rpub.publish(channel, i)
-                            continue
-                        else:
-                            # we can consume it!
-                            ws.send(json.dumps(i))  
-                    else:
-                        break
+            i = next(sub_client)
+            if i is not None:
+                pmess = json.loads(i['data'])
+                # we can consume it!
+                if user not in pmess['name']:
+                    ws.send(json.dumps(i))  
         except:
             pass
 
@@ -84,3 +91,7 @@ def hello(channel):
     lines  = open('names.txt').read().splitlines() 
     name = random.choice(lines) + str(random.randrange(0,1000))
     return render_template('wooper.html',name=name, channel=channel)
+
+@app.route('/')
+def home():
+    return 'hello'
