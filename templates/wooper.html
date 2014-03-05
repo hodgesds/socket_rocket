@@ -116,7 +116,7 @@ var border=1;
 var count = 0;
 var clist = [];
 var others = {};
-var maxobs = 100;
+var maxobs = 10;
 
 randomColor = function() {
     return "hsl(" + Math.random() * 360 + ",100%,50%)";
@@ -132,7 +132,19 @@ var cvis = d3.select("body").append("svg")
      .attr("border",border)
      .on("mousemove", cmove);
 
+var svg = d3.select("body").selectAll("svg");
+var circle = svg.selectAll("circle");
 
+function randSize(){
+    size = Math.random()*100;
+    intSize = size.toFixed(0);
+    if (intSize<10){
+        intSize = randSize();
+    }else if (intSize>100){
+        intSize = randSize();
+    }
+    return intSize;
+}
 
 function ceeLow(message){
     message = JSON.parse(message);
@@ -148,60 +160,63 @@ function ceeLow(message){
 
     myClass = data.name;
 
-    var enter2 = cvis.selectAll("circle."+ myClass)
-    .data(others[data.name].clist, keyFn)
+    enter2 = circle
+    .data(others[data.name].clist)
     .enter()
-    .append("cvis:circle")
+    .append("circle")
     .classed(data.name, true)
     .style("fill", data.color)
     .style("fill-opacity", .2)
-    .attr("cx", function(d) { return d.x; })
-    .attr("cy", function(d) { return d.y; })
+    .style("stroke", "black")
+    .style("stroke-opacity", .2)
+    .attr("cx", function(d,i) { return d.x; })
+    .attr("cy", function(d,i) { return d.y; })
     .attr("r", 20);
     
 
-    cvis.select("text", myClass).remove(); //get rid of old lables
+    svg.select("text."+myClass).remove(); //get rid of old lables
 
-    var who2 = cvis.selectAll("text." +myClass)
+    who2 = svg.selectAll("text."+myClass)
     .data([data.name])
     .enter()
     .append("text")
     .text(data.name)
     .classed(data.name, true)
-    .attr("dx", others[data.name].pos[0])
-    .attr("dy", others[data.name].pos[1])
+    .attr("dx", data.xcord)
+    .attr("dy", data.ycord)
     .attr("font-family", "sans-serif")
     .attr("font-size", "20px")
     .attr("fill", "black");
  
     others[data.name].count = others[data.name].count + 1;
-    others[data.name].clist.push({'x':others[data.name].pos[0], 'y':others[data.name].pos[1], 'name':data.name});
+    others[data.name].clist.push({'x':data.xcord, 'y':data.ycord, 'name':data.name});
 
     if (others[data.name].clist.length > maxobs){
-       others[data.name].clist.shift();
-       //enter2.select("circle", myClass)
-       //.remove();
+       others[data.name].clist.shift();       
+       svg.selectAll("circle").data(others[data.name].clist).remove();
     }    
 
 }
 
 
 function cmove(){
-    var pos = d3.mouse(this);
+    pos = d3.mouse(this);
     myClass = name;
-    var enter = cvis.selectAll("circle."+ myClass)
+    enter = cvis.selectAll("circle."+ myClass)
     .data(clist, keyFn)
     .enter()
     .append("cvis:circle")
     .classed(myClass, true)
     .style("fill", myColor)
     .style("fill-opacity", .2)
+    .style("stroke", "black")
+    .style("stroke-opacity", .2)
     .attr("cx", function(d) { return d.x; })
     .attr("cy", function(d) { return d.y; })
     .attr("r", 20);
 
     
-    cvis.select("text." + myClass).remove(); //get rid of old lables
+    cvis.select("text." + myClass).remove(); 
 
     var who = cvis.selectAll("text."+ myClass)
     .data([name])

@@ -48,6 +48,9 @@ def read_socket(ws):
                     rpub.publish(data['channel'], message)
             except:
                 pass
+        if ws.closed:
+            print 'connection closed'
+            break
     
 @sockets.route('/sub_msg')
 def echo_socket(ws):
@@ -59,6 +62,8 @@ def echo_socket(ws):
     sub_client = None
     open_channels = []
     while sub_client is None:
+        if ws.closed:
+            break
         print 'waiting on sub channel'
         message = ws.receive()
         if message:
@@ -83,6 +88,8 @@ def echo_socket(ws):
                     ws.send(json.dumps(i))  
         except:
             pass
+        if ws.closed:
+            break
 
 
 
