@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 REDIS_HOST,REDIS_PORT = '192.168.0.10', 6379
 
-app.debug=True
+app.debug=False
 sockets = Sockets(app)
 
 def grab_ps_data(ps):
