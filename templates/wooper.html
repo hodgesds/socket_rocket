@@ -38,6 +38,8 @@ var output;
 var channel = '{{channel}}';
 var pubUri = "ws://localhost:8000/pub_msg";
 var subUri = "ws://localhost:8000/sub_msg";
+pub_connected = false;
+sub_connected = false;
 
 function socketSetup(){
    pubsocket = new WebSocket(pubUri);
@@ -46,6 +48,7 @@ function socketSetup(){
    // socket handler functions
    pubsocket.onopen = function(evt) { 
        pubOpen(evt);
+       pubConnected = true;
    }; 
    pubsocket.onclose = function(evt) { 
        onClose(evt); 
@@ -59,6 +62,7 @@ function socketSetup(){
 
    subsocket.onopen = function(evt) { 
        subOpen(evt);
+       subConnected = true;
    }; 
    subsocket.onclose = function(evt) { 
        onClose(evt); 
@@ -89,7 +93,9 @@ function onClose(evt) {
 }  
 function onMessage(evt) { 
     //console.log('Got message:'+ evt.data);
-    ceeLow(evt.data);
+    if (pubConnected && subConnected){
+        ceeLow(evt.data);
+    }
 }  
 function onError(evt) { 
     console.log("ERROR!", evt.data); 
@@ -162,7 +168,6 @@ function ceeLow(message){
 
     enter2 = circle
     .data(others[data.name].clist)
-    .attr("r", function(d,i){ return 32/Math.log(2+i);})
     .enter()
     .append("circle")
     .classed(data.name, true)
@@ -172,7 +177,7 @@ function ceeLow(message){
     .style("stroke-opacity", .2)
     .attr("cx", function(d,i) { return d.x; })
     .attr("cy", function(d,i) { return d.y; })
-    .attr("r", function(d,i){ return 32/Math.log(2+maxobs);});
+    .attr("r", '20px');
     
 
     svg.select("text."+myClass).remove(); //get rid of old lables
@@ -205,7 +210,6 @@ function cmove(){
     myClass = name;
     enter = cvis.selectAll("circle."+ myClass)
     .data(clist, keyFn)
-    .attr("r", function(d,i){ return 32/Math.log(2+i);})
     .enter()
     .append("cvis:circle")
     .classed(myClass, true)
@@ -215,7 +219,7 @@ function cmove(){
     .style("stroke-opacity", .2)
     .attr("cx", function(d) { return d.x; })
     .attr("cy", function(d) { return d.y; })
-    .attr("r", function(d,i){ return 32/Math.log(2+maxobs);});
+    .attr("r", '20px');
 
     
     cvis.select("text." + myClass).remove(); 

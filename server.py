@@ -49,7 +49,7 @@ def echo_socket(ws):
     r = redis.client.StrictRedis()
     sub = r.pubsub()
     sub_client = None
-    open_channels = []
+    open_channels = ['master']
     while sub_client is None:
         if ws.closed:
             break
