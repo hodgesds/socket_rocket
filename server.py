@@ -23,7 +23,7 @@ def grab_ps_data(ps):
 
 
 def grab_stream_data(channel):
-    
+    pass
     
 @sockets.route('/pub_msg')
 def read_socket(ws):
