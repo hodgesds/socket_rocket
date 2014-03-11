@@ -1,28 +1,16 @@
 from flask import Flask
 from flask_sockets import Sockets
 from flask import render_template
-import gevent
 import random
 import json
 import redis
-import threading
-from time import sleep
-import os
-
-PID = os.getpid()
 
 app = Flask(__name__)
 
-REDIS_HOST = '192.168.0.10'
-REDIS_PORT = 6379
-app.config['REDIS_HOST'] = '192.168.0.10'
-app.config['REDIS_PORT'] = 6379
-app.config['BROKER_URL'] = 'redis://%s:%s/0' % (REDIS_HOST, REDIS_PORT)
-BROKER_URL = 'redis://%s:%s/0' % (REDIS_HOST, REDIS_PORT)
+REDIS_HOST,REDIS_PORT = '192.168.0.10', 6379
 
 app.debug=True
 sockets = Sockets(app)
-
 
 def grab_ps_data(ps):
     messages = []
@@ -33,12 +21,13 @@ def grab_ps_data(ps):
         else:
             yield None
 
-def listener(ws):
-    pass
+
+def grab_stream_data(channel):
+    
     
 @sockets.route('/pub_msg')
 def read_socket(ws):
-    rpub = redis.client.StrictRedis()
+    rpub = redis.client.StrictRedis() #should probably be a config setting...
     while True:
         message = ws.receive()
         if message:
