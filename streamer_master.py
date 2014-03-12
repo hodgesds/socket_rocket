@@ -13,8 +13,8 @@ def hello_world(environ, start_response):
     data =  {'color': 'hsl(0,0%,28%)', 'xcord': x, 'ycord': y, 'name': 'master', 'channel': 'master'}
     while True:
         # do 10 data points
-        x_trend = 5
-        y_trend = 5
+        x_trend = 4
+        y_trend = 4
         for _ in xrange(0,10):
             x_dir = randrange(0,10) > x_trend 
             y_dir = randrange(0,10) > y_trend
