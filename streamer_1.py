@@ -6,7 +6,7 @@ def hello_world(environ, start_response):
     start_response('200 OK', [('Content-Type', 'application/json')])
     counter = 0
     while True:
-        yield json.dumps({'a':counter}) + '\n'
+        yield json.dumps({'count':counter}) + '\n'
         counter += 1
         gevent.sleep(1)
  

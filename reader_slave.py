@@ -8,4 +8,4 @@ rpub = redis.client.StrictRedis()
 for line in res.iter_lines(chunk_size=30):
     data = json.loads(line)
     rpub.publish('master', line)
-    print data
+    print line
