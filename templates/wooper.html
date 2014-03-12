@@ -25,7 +25,7 @@ dots{
 <script src="static/jquery-1.10.1.min.js"></script>
 </head>
 <body>
-
+<h3>Draw some stuff...</h3>
 <script src="static/d3.v3.min.js"></script>
 <script>
 
@@ -38,8 +38,8 @@ var output;
 var channel = '{{channel}}';
 var pubUri = "ws://localhost:8000/pub_msg";
 var subUri = "ws://localhost:8000/sub_msg";
-pub_connected = false;
-sub_connected = false;
+var pubConnected = false;
+var subConnected = false;
 
 function socketSetup(){
    pubsocket = new WebSocket(pubUri);
@@ -179,7 +179,6 @@ function ceeLow(message){
     .attr("cy", function(d,i) { return d.y; })
     .attr("r", '20px');
     
-
     svg.select("text."+myClass).remove(); //get rid of old lables
 
     who2 = svg.selectAll("text."+myClass)
@@ -254,12 +253,13 @@ function cmove(){
  var cborderPath = cvis.append("rect")
   .attr("x", 0)
   .attr("y", 0)
+  .attr("rx", 10)
+  .attr("ry", 10)
   .attr("height", h)
   .attr("width", w)
-  .style("stroke", "red")
+  .style("stroke", "black")
   .style("fill", "none")
-  .style('stroke-linejoin', 'round')
-  .style("stroke-width", 1);
+  .style("stroke-width", 2);
 
 
 </script>
