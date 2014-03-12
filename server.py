@@ -13,10 +13,8 @@ app.debug=False
 sockets = Sockets(app)
 
 def grab_ps_data(ps):
-    messages = []
     for item in ps.listen():
         if item['type'] == 'message':
-            messages.append(item)
             yield item
         else:
             yield None
