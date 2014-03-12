@@ -340,7 +340,6 @@ screen and (max-device-width: 1024px) {
     def echo_socket(ws):
         channel = None
         user = None
-        rlisten = redis.client.StrictRedis()
         r = redis.client.StrictRedis()
         sub = r.pubsub()
         sub_client = None
