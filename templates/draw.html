@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+<style>
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  margin: auto;
+  padding-top: 40px;
+  position: relative;
+  width: 960px;
+}
+
+line {
+    stroke: 'black';
+    stroke-width: 1px;
+}
+
+dots{
+   stroke: {{color}};
+}
+
+</style>
+
+<script src="static/jquery-1.10.1.min.js"></script>
+</head>
+<body>
+<h3>Draw some stuff...</h3>
+<script src="static/d3.v3.min.js"></script>
+<script>
+
+
+//////////////////////////////////
+// sockets
+//////////////////////////////////
+var name = '{{name}}';
+var output;  
+var channel = '{{channel}}';
+var pubUri = "ws://localhost:8000/pub_msg";
+var subUri = "ws://localhost:8000/sub_msg";
+var pubConnected = false;
+var subConnected = false;
+
+function socketSetup(){
+   pubsocket = new WebSocket(pubUri);
+   subsocket = new WebSocket(subUri);
+
+   // socket handler functions
+   pubsocket.onopen = function(evt) { 
+       pubOpen(evt);
+       pubConnected = true;
+   }; 
+   pubsocket.onclose = function(evt) { 
+       onClose(evt); 
+   }; 
+   pubsocket.onmessage = function(evt) { 
+     onMessage(evt);
+   }; 
+   pubsocket.onerror = function(evt) { 
+     onError(evt);
+   };
+
+   subsocket.onopen = function(evt) { 
+       subOpen(evt);
+       subConnected = true;
+   }; 
+   subsocket.onclose = function(evt) { 
+       onClose(evt); 
+   }; 
+   subsocket.onmessage = function(evt) { 
+     onMessage(evt);
+   }; 
+   subsocket.onerror = function(evt) { 
+     onError(evt);
+   };
+}
+
+function pubOpen(evt) { 
+    console.log('pub channel open');
+    pubSend(name + " has connected!"); 
+    // subscribe to the channel
+    pubsocket.send('{"subscribe":"' + channel + '"}');
+} 
+function subOpen(evt) { 
+    console.log('sub channel open');
+    subSend(name + " has connected!"); 
+    // subscribe to the channel
+    subsocket.send('{"subscribe":"' + channel + '", "user":"' + name +'"}');
+} 
+
+function onClose(evt) { 
+    writeToScreen(name + " has disconnected!"); 
+}  
+function onMessage(evt) { 
+    //console.log('Got message:'+ evt.data);
+    if (pubConnected && subConnected){
+        ceeLow(evt.data);
+    }
+}  
+function onError(evt) { 
+    console.log("ERROR!", evt.data); 
+}  
+function pubSend(message) { 
+   pubsocket.send(message);
+}
+function subSend(message) { 
+   subsocket.send(message);
+}
+function writeToScreen(message) {
+   console.log(message);
+}
+
+
+socketSetup();
+// D3 setup stuff
+
+var line;
+var dots;
+var w = 900;
+var h = 400;
+var border=1;
+var count = 0;
+var clist = [];
+var others = {};
+var maxobs = 10;
+
+randomColor = function() {
+    return "hsl(" + Math.random() * 360 + ",100%,50%)";
+}
+
+var myColor = randomColor();
+function keyFn(item){
+    return item.x + item.y + item.name;
+}
+var cvis = d3.select("body").append("svg")
+     .attr("width", w)
+     .attr("height", h)
+     .attr("border",border)
+     .on("mousemove", cmove);
+
+var svg = d3.select("body").selectAll("svg");
+var circle = svg.selectAll("circle");
+
+function randSize(){
+    size = Math.random()*100;
+    intSize = size.toFixed(0);
+    if (intSize<10){
+        intSize = randSize();
+    }else if (intSize>100){
+        intSize = randSize();
+    }
+    return intSize;
+}
+
+function ceeLow(message){
+    message = JSON.parse(message);
+    data = JSON.parse(message.data);
+    if (Object.keys(others).indexOf(data.name)===-1){
+        others[data.name] = {
+            clist : [],
+            pos: [data.xcord, data.ycord],
+            color: data.color,
+            count:0,
+        }
+    }
+
+    myClass = data.name;
+
+    enter2 = circle
+    .data(others[data.name].clist)
+    .enter()
+    .append("circle")
+    .classed(data.name, true)
+    .style("fill", data.color)
+    .style("fill-opacity", .2)
+    .style("stroke", "black")
+    .style("stroke-opacity", .2)
+    .attr("cx", function(d,i) { return d.x; })
+    .attr("cy", function(d,i) { return d.y; })
+    .attr("r", '20px');
+    
+    svg.select("text."+myClass).remove(); //get rid of old lables
+
+    who2 = svg.selectAll("text."+myClass)
+    .data([data.name])
+    .enter()
+    .append("text")
+    .text(data.name)
+    .classed(data.name, true)
+    .attr("dx", data.xcord)
+    .attr("dy", data.ycord)
+    .attr("font-family", "sans-serif")
+    .attr("font-size", "20px")
+    .attr("fill", "black");
+ 
+    others[data.name].count = others[data.name].count + 1;
+    others[data.name].clist.push({'x':data.xcord, 'y':data.ycord, 'name':data.name});
+
+    if (others[data.name].clist.length > maxobs){
+       others[data.name].clist.shift();       
+       svg.selectAll("circle").data(others[data.name].clist).remove();
+    }    
+
+}
+
+
+function cmove(){
+    pos = d3.mouse(this);
+    myClass = name;
+    enter = cvis.selectAll("circle."+ myClass)
+    .data(clist, keyFn)
+    .enter()
+    .append("cvis:circle")
+    .classed(myClass, true)
+    .style("fill", myColor)
+    .style("fill-opacity", .2)
+    .style("stroke", "black")
+    .style("stroke-opacity", .2)
+    .attr("cx", function(d) { return d.x; })
+    .attr("cy", function(d) { return d.y; })
+    .attr("r", '20px');
+
+    
+    cvis.select("text." + myClass).remove(); 
+
+    var who = cvis.selectAll("text."+ myClass)
+    .data([name])
+    .enter()
+    .append("text")
+    .text(name)
+    .classed(myClass, true)
+    .attr("dx", pos[0])
+    .attr("dy", pos[1])
+    .attr("font-family", "sans-serif")
+    .attr("font-size", "20px")
+    .attr("fill", "black");
+ 
+    var socketMessage = '{"name":"' + name + '","xcord":"' + Math.round(pos[0]) + 
+        '","ycord":"' + Math.round(pos[1]) + '","channel":"' + channel +
+        '","color":"' + myColor + '"}';
+
+    pubsocket.send(socketMessage);
+    count += 1;
+    clist.push({'x':pos[0], 'y':pos[1],'name':name});
+    if (clist.length > maxobs){
+       clist.shift();
+       cvis.select("circle."+myClass)
+       .remove();
+    }    
+}
+
+
+ var cborderPath = cvis.append("rect")
+  .attr("x", 0)
+  .attr("y", 0)
+  .attr("rx", 10)
+  .attr("ry", 10)
+  .attr("height", h)
+  .attr("width", w)
+  .style("stroke", "black")
+  .style("fill", "none")
+  .style("stroke-width", 2);
+
+
+</script>
+
+</body>
+</html>

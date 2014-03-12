@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  background: #929292;
+  font-family: "Helvetica Neue";
+  margin: auto;
+  width: 100%;
+}
+
+a {
+  color: #6baed6;
+}
+
+a:not(:hover) {
+  text-decoration: none;
+}
+
+.stack {
+  background: black;
+  color: #fff;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  -ms-box-sizing: border-box;
+  -o-box-sizing: border-box;
+  display: none;
+  font-size: 48px;
+  height: 100%;
+  padding: 10px 30px;
+  width: 100%;
+  -webkit-transform: translate3d(0,0,0);
+}
+
+.active {
+  box-shadow: 0px 4px 8px rgba(0,0,0,.5);
+  display: block;
+  position: fixed;
+}
+
+.grey {
+  color: #969696;
+}
+
+@media
+screen and (max-device-width: 1024px) {
+  body {
+    width: 1024px;
+  }
+
+.stack {
+    margin: 40px 0;
+}
+
+
+.center{
+    display: block
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center; 
+}
+
+.big {
+  font-size: 128px;
+}
+
+.caption {
+  font-size: 96px;
+  text-align: center;
+  text-shadow: 0px 2px 6px rgba(0,0,0,.5);
+}
+
+
+</style>
+<body class="overview">
+
+<section>
+    <h2 class="caption" style="margin-left:auto; margin-right:auto; text-align:center;">Simple Websockets in Flask</h2>
+    <h3 style="margin-left:auto; margin-right:auto; text-align:center;">Daniel Hodges</h3>
+    <p style="margin-left:auto; margin-right:auto; text-align:center;"><br><i>CHIPY<br> 03/13/2014</i></p>
+</section>
+
+<section>
+    <h2 class="caption">Thanks:</h2>
+    <ul>
+        <li>Deloitte</li>
+        <li>Chipy</li>
+        <li>Brian Ray</li>
+    </ul>
+</section>
+
+<section>
+    <h1>How many have used an API?</h1>
+</section>
+
+<section>
+    <h1>How many have used a Streaming API?</h1>
+</section>
+
+<section>
+    <h2>Overview:</h2>
+    <ul>
+        <li>Flask Sockets</li>
+        <li>Simple Streaming Server (gevent)</li>
+        <li>Parsing Streaming Data</li>
+        <li>Javascript WebSockets</li>
+        <li>A fun example?</li>
+        <li>Gotchas!</li>
+        <li>Future musings</li>
+    </ul>
+    <p>Clone along <a href="https://github.com/hodgesds/socket_rocket.git">https://github.com/hodgesds/socket_rocket.git</a></p>
+</section>
+
+
+<section>
+    <h2><a href="https://github.com/kennethreitz/flask-sockets">Flask Sockets</a></h2>
+    <p><i>A simple WebSocket server...</i></p>
+    <pre style="font-size:18px;">
+        from flask import Flask
+        from flask_sockets import Sockets
+        app = Flask(__name__)
+
+        sockets = Sockets(app)
+
+        @sockets.route('/echo')
+        def echo_socket(ws):
+            while True:
+                message = ws.receive()
+                ws.send(message)
+
+        @app.route('/')
+        def hello():
+            return 'Hello World!'
+    </pre>
+</section>
+
+<section>
+    <h2><a href="http://sdiehl.github.io/gevent-tutorial/#streaming-servers">Simple Streaming Server (gevent)</a></h2>
+    <p><i>A streaming server...</i></p>
+    <pre style="font-size:18px;">
+    from gevent.wsgi import WSGIServer
+
+    def application(environ, start_response):
+        status = '200 OK'
+        body = 'Hello World'
+
+    headers = [
+        ('Content-Type', 'text/html')
+    ]
+
+    start_response(status, headers)
+    return [body]
+
+    WSGIServer(('', 8000), application).serve_forever()
+    </pre>
+</section>
+
+<section>
+    <h2><a href="http://docs.python-requests.org/en/latest/user/advanced/#streaming-requests">Parsing Streaming Data</a></h2>
+    <p><i>Parsing a stream...</i></p>
+    <pre style="font-size:18px;">    
+    import json
+    import requests
+
+    r = requests.get('http://httpbin.org/stream/20', stream=True)
+
+    for line in r.iter_lines():
+
+        # filter out keep-alive new lines
+        if line:
+            print json.loads(line)
+    </pre>
+</section>
+
+<section>
+    <h2><a href="http://dev.w3.org/html5/websockets/#the-websocket-interface">Javascript Websockets</a></h2>
+    <p>Read the standards proposed by W3 for details on implementations</p>    
+    <p>Other sources:</p>
+    <ul>
+        <li><a href="http://www.websocket.org/">WebSocket.org</a></li>
+        <li><a href="http://socket.io/">Socket.io</a></li>
+    </ul>
+</section>
+
+<section>
+    <h2><a href="http://www.developerfusion.com/article/143158/an-introduction-to-websockets/">Javascript Websockets</a></h2>
+    <p>But it is this easy....</p>
+    <pre style="font-size:18px;">
+        var mySocketConnection = new WebSocket('ws://example.org:12345/myapp');
+    </pre>
+</section>
+
+<section>
+    <h1 class="caption">Demo Time!!!</h1>
+    <p><i>Server</i></p>
+    <pre style="font-size:18px;">
+    from gevent import pywsgi
+    import gevent
+    import json
+
+    def hello_world(environ, start_response):
+        start_response('200 OK', [('Content-Type', 'application/json')])
+        counter = 0
+        while True:
+            yield json.dumps({'count':counter})
+            counter += 1
+            gevent.sleep(.2)
+     
+    server = pywsgi.WSGIServer(
+        ('', 8080), hello_world)
+     
+    server.serve_forever()
+    </pre>
+</section>
+
+<section>
+    <h1 class="caption">Demo Time!!!</h1>
+    <p><i>Receiver</i></p>
+    <pre style="font-size:18px;">
+    import json
+    import requests as r
+    res = r.get('http://localhost:8080', stream=True)
+
+    for line in res.iter_lines(chunk_size=1):
+        data = json.loads(line)
+        print data
+    </pre>
+</section>
+
+<section>
+    <h1>I'm not impressed...</h1>
+    <p>Lets try 2 things:</p>
+    <ul>
+        <li>Socket publishing <i>(via Redis)</i></li>
+        <li>Websocket Subscribing <i>(also via Redis)</i></li>
+    </ul>
+</section>
+
+<section>
+    <h1>HOLD UP!!!!</h1>
+    <p>The Redis pub-sub client is blocking.....</p>
+    <img src="static/no.gif"></img>
+</section>
+
+<section>
+    <h1>Generators to the rescue!!!</h1>
+    <pre style="font-size:18px;">
+    def grab_ps_data(ps):
+        messages = []
+        for item in ps.listen():
+            if item['type'] == 'message':
+                messages.append(item)
+                yield item
+            else:
+                yield None
+    
+    open_channels = ['master']
+    r = redis.client.StrictRedis()
+    sub = r.pubsub()
+    sub.subscribe(open_channels)
+    sub_client = grab_ps_data(sub)
+    while True:
+        i = next(sub_client)
+            if i is not None:
+                # we have data
+                print i
+    </pre>
+</section>
+
+<section>
+    <h1 class="caption"><a href="/test">MEGA FUN EXAMPLE</a></h1>
+</section>
+
+<section>
+    <p><i>Streaming server (next slide)</i></p>
+</section>
+
+<section>
+    <pre  style="font-size:15px;">
+        def hello_world(environ, start_response):
+            start_response('200 OK', [('Content-Type', 'application/json')])
+            w = 900 # hard coded... ouch
+            h = 400
+            x = randrange(0,w)
+            y = randrange(0,h)
+            data =  {'color': 'hsl(0,0%,28%)', 'xcord': x, 'ycord': y, 'name': 'master', 'channel': 'master'}
+            while True:
+                # do 10 data points
+                x_trend = 4
+                y_trend = 4
+                for _ in xrange(0,10):
+                    x_dir = randrange(0,10) > x_trend 
+                    y_dir = randrange(0,10) > y_trend
+                    if x_dir:
+                        x += randrange(0,15)
+                        x_trend -= 1
+                    else:
+                        x -= randrange(0,15)
+                        x_trend += 1
+                    if y_dir:
+                        y += randrange(0,15)
+                        y_trend -= 1
+                    else:
+                        y -= randrange(0,15)
+                        y_trend += 1
+                    if x>w or x<0:
+                        x = randrange(0,w)
+                    if y>h or y<0:
+                        y = randrange(0,h)
+                    data['xcord'] = unicode(x)
+                    data['ycord'] = unicode(y)
+                    yield json.dumps(data)
+                    gevent.sleep(.1)
+    </pre>
+</section>
+
+<section>
+    <p><i>Stream parser/publisher</i></p>
+    <pre style="font-size:18px;">
+        import json
+        import requests as r
+        import redis
+        res = r.get('http://localhost:8080', stream=True)
+
+        rpub = redis.client.StrictRedis()
+
+        for line in res.iter_lines(chunk_size=30):
+            data = json.loads(line)
+            rpub.publish('master', line)
+            print line
+    </pre>
+</section>
+<section>
+    <p><i>WebSocket Subscriber</i></p>
+    <pre style="font-size:13px;">
+    @sockets.route('/sub_msg')
+    def echo_socket(ws):
+        channel = None
+        user = None
+        rlisten = redis.client.StrictRedis()
+        r = redis.client.StrictRedis()
+        sub = r.pubsub()
+        sub_client = None
+        open_channels = ['master']
+        while sub_client is None:
+            message = ws.receive()
+            if message:
+                try:
+                    data = json.loads(message)
+                    if 'subscribe' in data.keys():
+                        channel = data['subscribe']
+                        user = data['user']
+                        open_channels.append(data['subscribe'])
+                        sub.subscribe(open_channels)
+                        sub_client = grab_ps_data(sub)
+                except:
+                    pass
+        while True:
+            try:
+                i = next(sub_client)
+                if i is not None:
+                    pmess = json.loads(i['data'])
+                    # we can consume it!
+                    if user not in pmess['name']:
+                        ws.send(json.dumps(i))  
+            except:
+                pass
+    </pre>
+</section>
+
+
+<section>
+    <p><i>WebSocket Publisher</i></p>
+    <pre style="font-size:18px;">
+        @sockets.route('/pub_msg')
+        def read_socket(ws):
+            rpub = redis.client.StrictRedis() #should probably be a config setting...
+            while True:
+                message = ws.receive()
+                if message:
+                    try:
+                        data = json.loads(message)
+                        if 'name' in data.keys() and 'channel' in data.keys():
+                            rpub.publish(data['channel'], message)
+                    except:
+                        pass
+                if ws.closed:
+                    break
+    </pre>
+</section>
+
+<section>
+    <h1>Javascript WebSockets</h1>
+    <p><i>See draw.html for full code</i></p>
+    <pre style="font-size:18px;">
+    var pubUri = "ws://localhost:8000/pub_msg";
+    var subUri = "ws://localhost:8000/sub_msg";
+    pubsocket = new WebSocket(pubUri);
+    subsocket = new WebSocket(subUri);
+    
+    function myBigFunctionWithVariables(){
+        // go inside a function that makes lots of variables
+        var socketMessage = '{"name":"' + name + '","xcord":"' + Math.round(pos[0]) + 
+            '","ycord":"' + Math.round(pos[1]) + '","channel":"' + channel +
+            '","color":"' + myColor + '"}';
+
+        //send the message on the pub socket
+        pubsocket.send(socketMessage);
+    }
+    </pre>
+</section>
+
+
+<section>
+    <h1>Gotchas</h1>
+    <ul>
+        <li>Some (mobile) ISPs block websockets...</li>
+        <li>Socket auth? (grab session from cookie and validate on connect?)</li>
+    </ul>
+</section>
+
+<section>
+    <h1>Future Applications</h1>
+    <ul>
+        <li>Real time data -> front end js</li>
+        <li>Sensor data (automotive, industrial, weather)</li>
+        <li>Financial data</li>
+        <li>Front end frameworks <i>flaskbacksocketbone???</i></li>
+    </ul>
+</section>
+
+<section>
+    <h1>All Done!!!</h1>
+    <p>Thanks for listening, any questions???</p>
+    <p>Get the code (including slides+links):
+        <br>
+        <a href="https://github.com/hodgesds/socket_rocket.git">https://github.com/hodgesds/socket_rocket.git</a>
+    </p>
+</section>
+
+<script src="static/d3.v3.min.js"></script>
+<script src="static/stack.v0.min.js"></script>
+</body>
+</html>
